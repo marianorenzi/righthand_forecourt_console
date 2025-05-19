@@ -1,0 +1,141 @@
+TabbedContent {
+    dock: top;
+}
+
+PumpDetails {
+    background: blue 20%;
+    color: blue;
+    border: solid blue;
+    height: 22%;
+    grid-size: 7;
+}
+
+ModalScreen {
+    align: center middle;
+}
+
+ModalScreen > Grid {
+    grid-size: 2;
+    grid-gutter: 1 2;
+    grid-rows: 1fr 3;
+    padding: 0 1;
+    width: 60;
+    border: thick $background 80%;
+    background: $surface;
+}
+
+ModalScreen Input {
+    width: 20;
+}
+
+ModalScreen Checkbox {
+    border: none;
+    margin: 1;
+}
+
+ModalScreen Button {
+    width: 100%;
+}
+
+PresetModal > Grid {
+    height: 18;
+}
+
+PriceChangeModal > Grid {
+    height: 12;
+}
+
+AuthGradesModal > Grid {
+    height: 12;
+}
+
+PumpGrid {
+    background: green 20%;
+    color: green;
+    border: solid green;
+    layout: grid;
+    align: left top;
+    grid-gutter: 1 2;
+    grid-size: 10;
+}
+
+Pump {
+    background: red 20%;
+    color: red;
+    border: solid red;
+}
+
+MqttViewer {
+    height: 15%;
+}
+
+Label.pump_value {
+    width: 50%;
+    content-align: right middle;
+    dock: right;
+}
+
+Label.pump_value_label {
+    content-align: left middle;
+}
+
+Label.pump_id {
+    text-align: center;
+    width: 100%;
+}
+
+#grades_info {
+    width: 45;
+    border-left: solid blue;
+}
+
+#grades_info HorizontalGroup {
+    align: right middle;
+}
+
+#grades_info Digits {
+    text-align: right;
+    width: 32;
+}
+
+#last_sale {
+    width: 38;
+    border-left: solid blue;
+}
+
+#last_sale HorizontalGroup {
+    align: right middle;
+}
+
+#last_sale Digits {
+    text-align: right;
+    width: 25;
+}
+
+#last_sale_plot {
+    column-span: 2;
+    width: 60;
+    margin-left: 2;
+}
+
+.option_label {
+    height: 3;
+    content-align: center middle;
+    width: 12;
+}
+
+.option_title {
+    content-align: center middle;
+}
+
+#handle_select {
+    width: 12;
+}
+
+#flow_slider {
+    width: 12;
+}
+
+#valve_switch {
+    width: 12;
+}
