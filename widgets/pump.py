@@ -1,5 +1,5 @@
 from textual.app import ComposeResult
-from textual.widgets import Digits, ListItem, Label, Button
+from textual.widgets import ListItem, Label
 from textual.containers import VerticalGroup, HorizontalGroup
 from textual.reactive import reactive
 from widgets.mqtt_console import MQTTClient
@@ -28,15 +28,14 @@ class PumpValue(HorizontalGroup):
 
 class Pump(ListItem):
 
+    pump_type = ""
     status = reactive("", init=False)
     grades = reactive(0, init=False)
     calling_grade = reactive(-1, init=False)
     sale = reactive(dict(), init=False)
-    # totals = reactive(List[dict()], init=False)
-    # prices = reactive(List[float], init=False)
-    totals = []
-    prices = []
-    pump_type = ""
+    totals = reactive([{"volume":0.0,"money":0.0} for _ in range(8)], init=False)
+    prices = reactive([0.0 for _ in range(8)], init=False)
+    rtm_history = reactive(list[dict], init=False)
     emulator_valve = reactive(False, init=False)
     emulator_flow = reactive(0.0, init=False)
 
@@ -47,7 +46,7 @@ class Pump(ListItem):
 
     def compose(self) -> ComposeResult:
         yield Label(f"Pump {self.pump_id}", classes="pump_id")
-        yield Label(f"Type", id="pump_type")
+        yield Label(f"Type: unknown", id="pump_type")
         yield PumpValue("Status", id="pump_status")
         yield PumpValue("V", id="sale_volume")
         yield PumpValue("$", id="sale_money")
@@ -59,11 +58,17 @@ class Pump(ListItem):
         self.calling_grade = -1
         self.sale = {"volume": 0.0, "money": 0.0, "price": 0.0}
         # subscribe to MQTT events
+        self.mqtt_subscribe()
+
+    def on_unmount(self):
+        self.mqtt_unsubscribe()
+
+    def mqtt_subscribe(self):
         self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/status", self.on_mqtt_status)
         self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/grade", self.on_mqtt_calling_grade)
-        self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/sale_start", self.on_mqtt_sale)
+        self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/sale_start", self.on_mqtt_sale_start)
         self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/sale_end", self.on_mqtt_sale)
-        self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/rtm", self.on_mqtt_sale)
+        self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/rtm", self.on_mqtt_rtm)
         self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/totals", self.on_mqtt_totals)
         self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/ppu", self.on_mqtt_price)
         # subscribe to MQTT emulator extended events
@@ -72,13 +77,35 @@ class Pump(ListItem):
         # subscribe to MQTT responses
         self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/grades", self.on_mqtt_grades)
         self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/status", self.on_mqtt_status)
-        self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/calling_grade", self.on_mqtt_calling_grade)
+        self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/grade", self.on_mqtt_calling_grade)
         self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/sale", self.on_mqtt_sale)
         self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/totals", self.on_mqtt_totals)
         self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/ppu", self.on_mqtt_price)
         self.mqtt_client.subscribe(f"res/pumps/{self.pump_id}/type", self.on_mqtt_type)
         # subscribe to on_connect
         self.mqtt_client.subscribe_on_connect(self.on_mqtt_connect)
+
+    def mqtt_unsubscribe(self):
+        self.mqtt_client.unsubscribe(f"evt/pumps/{self.pump_id}/status")
+        self.mqtt_client.unsubscribe(f"evt/pumps/{self.pump_id}/grade")
+        self.mqtt_client.unsubscribe(f"evt/pumps/{self.pump_id}/sale_start")
+        self.mqtt_client.unsubscribe(f"evt/pumps/{self.pump_id}/sale_end")
+        self.mqtt_client.unsubscribe(f"evt/pumps/{self.pump_id}/rtm")
+        self.mqtt_client.unsubscribe(f"evt/pumps/{self.pump_id}/totals")
+        self.mqtt_client.unsubscribe(f"evt/pumps/{self.pump_id}/ppu")
+        # subscribe to MQTT emulator extended events
+        self.mqtt_client.unsubscribe(f"eevt/pumps/{self.pump_id}/flow")
+        self.mqtt_client.unsubscribe(f"eevt/pumps/{self.pump_id}/valve")
+        # subscribe to MQTT responses
+        self.mqtt_client.unsubscribe(f"res/pumps/{self.pump_id}/grades")
+        self.mqtt_client.unsubscribe(f"res/pumps/{self.pump_id}/status")
+        self.mqtt_client.unsubscribe(f"res/pumps/{self.pump_id}/grade")
+        self.mqtt_client.unsubscribe(f"res/pumps/{self.pump_id}/sale")
+        self.mqtt_client.unsubscribe(f"res/pumps/{self.pump_id}/totals")
+        self.mqtt_client.unsubscribe(f"res/pumps/{self.pump_id}/ppu")
+        self.mqtt_client.unsubscribe(f"res/pumps/{self.pump_id}/type")
+        # subscribe to on_connect
+        self.mqtt_client.unsubscribe_on_connect(self.on_mqtt_connect)
 
     def authorize(self, grades: List[int] = []) -> None:
 
@@ -149,21 +176,39 @@ class Pump(ListItem):
         self.calling_grade = int(payload)
 
     def on_mqtt_sale(self, topic: str, payload: str):
-        new_sale = self.sale.copy()
-        new_sale.update(json.loads(payload))
-        self.sale = new_sale
+        self.sale.update(json.loads(payload))
+        self.mutate_reactive(Pump.sale)
+
+    def on_mqtt_sale_start(self, topic: str, payload: str):
+        self.rtm_history = []
+        self.on_mqtt_sale(topic, payload)
+
+    def on_mqtt_rtm(self, topic: str, payload: str):
+        rtm = json.loads(payload)
+
+        # process rtm as sale for display update
+        sale = rtm.copy()
+        del sale["time"]
+        payload = json.dumps(sale)
+        self.on_mqtt_sale(topic, payload)
+
+        # remove undesired data for rtm
+        del rtm["grade"]
+        del rtm["money"]
+        self.rtm_history.append(rtm)
+        self.mutate_reactive(Pump.rtm_history)
 
     def on_mqtt_totals(self, topic: str, payload: str):
-        pass
-        # total = json.loads(payload)
-        # totalAux = {"volume": total["volume"], "money": total["money"]}
-        # self.totals[total["grade"]] = totalAux
+        total = json.loads(payload)
+        totalAux = {"volume": total["volume"], "money": total["money"]}
+        self.totals[total["grade"]] = totalAux
+        self.mutate_reactive(Pump.totals)
 
     def on_mqtt_price(self, topic: str, payload: str):
-        pass
-        # price = json.loads(payload)
-        # priceAux = price["price"]
-        # self.prices[price["grade"]] = priceAux
+        price = json.loads(payload)
+        priceAux = price["price"]
+        self.prices[price["grade"]] = priceAux
+        self.mutate_reactive(Pump.prices)
 
     def on_mqtt_type(self, topic: str, payload: str):
         self.pump_type = payload

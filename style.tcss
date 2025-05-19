@@ -2,6 +2,22 @@ TabbedContent {
     dock: top;
 }
 
+#new_footer {
+    height: 1;
+    dock: bottom;
+}
+
+#footer-inner {
+    # width: auto;
+}
+
+#mqtt_status {
+    width: 24;
+    text-align: right;
+    background: $footer-background;
+    padding-right: 2;
+}
+
 PumpDetails {
     background: blue 20%;
     color: blue;
@@ -65,7 +81,7 @@ Pump {
     border: solid red;
 }
 
-MqttViewer {
+PumpServicePane MqttViewer {
     height: 15%;
 }
 

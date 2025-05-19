@@ -29,4 +29,4 @@ class PumpServicePane(TabPane):
         if isinstance(event.item, Pump):
             self.query_one(PumpDetails).set_pump(event.item)
         else:
-            self.notify("Selected item is not a Pump!")
+            self.query_one(PumpDetails).set_pump(None)
