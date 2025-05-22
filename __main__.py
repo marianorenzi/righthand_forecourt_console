@@ -2,22 +2,27 @@
 import paho.mqtt.client as mqtt
 from typing import Iterable
 from datetime import datetime, timedelta
+from textual import work
 from textual.app import App, ComposeResult, SystemCommand
 from textual.containers import Horizontal
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Label, TabbedContent
 from widgets.pump_service import PumpServicePane
-from widgets.pump_config import PumpConfigPane
 from widgets.mqtt_console import MqttClientPane
-from widgets.mqtt_console import MQTTClient
+from widgets.mqtt_console import MqttClient
+import threading
 
 class RightHandForecourtConsole(App):
+    
+    CSS_PATH = "style.tcss"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.mqtt = MQTTClient()
-        self.mqtt.connect()
+        self.mqtt = MqttClient()
 
-    CSS_PATH = "style.tcss"
+    @work(thread=True, group="mqtt")
+    def start_mqtt(self):
+        self.mqtt.connect()
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -30,19 +35,16 @@ class RightHandForecourtConsole(App):
             yield Label("🔴 MQTT Disconnected", id="mqtt_status")
 
     def on_mount(self) -> None:
-        # self.mqtt.connect()
+        self.start_mqtt()
         self.title = "RightHand Forecourt Console"
         self.mqtt.subscribe_on_connect(self.on_mqtt_connect)
         self.mqtt.subscribe_on_disconnect(self.on_mqtt_disconnect)
 
-    def on_mqtt_connect(self):
+    def on_mqtt_connect(self, rc):
         self.query_one("#mqtt_status", Label).update("🟢 MQTT Connected")
 
     def on_mqtt_disconnect(self):
         self.query_one("#mqtt_status", Label).update("🔴 MQTT Disconnected")
-
-    # def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
-    #     yield from super().get_system_commands(screen)
 
 if __name__ == "__main__":
     RightHandForecourtConsole().run()

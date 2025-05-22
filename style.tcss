@@ -1,6 +1,6 @@
-TabbedContent {
-    dock: top;
-}
+# TabbedContent {
+#     dock: top;
+# }
 
 #new_footer {
     height: 1;
@@ -16,14 +16,6 @@ TabbedContent {
     text-align: right;
     background: $footer-background;
     padding-right: 2;
-}
-
-PumpDetails {
-    background: blue 20%;
-    color: blue;
-    border: solid blue;
-    height: 22%;
-    grid-size: 7;
 }
 
 ModalScreen {
@@ -65,6 +57,40 @@ AuthGradesModal > Grid {
     height: 12;
 }
 
+AutoSaleModal > Grid {
+    height: 38;
+}
+
+AutoSaleModal HorizontalGroup.preset Checkbox {
+    width: 20;
+}
+
+AutoSaleModal Center {
+    align: center middle;
+    margin: 1;
+}
+
+AutoSaleModal Label {
+    max-width: 54;
+    text-align: center;
+}
+
+AutoSaleModal Select {
+    width: 15;
+}
+
+AutoSaleModal Input {
+    width: 15;
+}
+
+PumpDetails {
+    background: blue 20%;
+    color: blue;
+    border: solid blue;
+    height: 22%;
+    grid-size: 7;
+}
+
 PumpGrid {
     background: green 20%;
     color: green;
@@ -73,6 +99,7 @@ PumpGrid {
     align: left top;
     grid-gutter: 1 2;
     grid-size: 10;
+    height: auto;
 }
 
 Pump {
@@ -128,10 +155,14 @@ Label.pump_id {
     width: 25;
 }
 
-#last_sale_plot {
+#last_sale_plot_container {
     column-span: 2;
     width: 60;
     margin-left: 2;
+}
+
+#last_sale_plot {
+    width: 100%;
 }
 
 .option_label {
