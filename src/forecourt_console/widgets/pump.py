@@ -181,6 +181,11 @@ class Pump(ListItem):
             self.on_mqtt_sale(message.payload)
         elif message.topic == f"res/pumps/{self.pump_id}/type":
             self.on_mqtt_type(message.payload)
+        else:
+            return
+        
+        # message handled, stop the message from bubbling
+        message.stop()
 
     def on_mqtt_connect(self, rc):
         # request data to MQTT

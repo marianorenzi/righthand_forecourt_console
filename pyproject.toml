@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "forecourt-console"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Mariano Renzi", email = "mariano@renzi.com.ar" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "paho-mqtt>=2.1.0",
+  "textual>=3.2.0",
+  "textual-plotext>=1.0.1",
+  "textual-slider>=0.2.0",
+]
+
+[project.urls]
+Documentation = "https://github.com/marianorenzi/righthand_forecourt_console#readme"
+Issues = "https://github.com/marianorenzi/righthand_forecourt_console/issues"
+Source = "https://github.com/marianorenzi/righthand_forecourt_console"
+
+[tool.hatch.version]
+path = "src/forecourt_console/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/forecourt_console tests}"
+
+[tool.coverage.run]
+source_pkgs = ["forecourt_console", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/forecourt_console/__about__.py",
+]
+
+[tool.coverage.paths]
+forecourt_console = ["src/forecourt_console", "*/forecourt-console/src/forecourt_console"]
+tests = ["tests", "*/forecourt-console/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]

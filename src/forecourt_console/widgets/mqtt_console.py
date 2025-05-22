@@ -6,6 +6,7 @@ from textual.widget import Widget
 from textual.message import Message
 from datetime import datetime
 import paho.mqtt.client as mqtt
+import time
 
 class MqttClient:
     def __init__(self, host: str="localhost", port: int=1883):

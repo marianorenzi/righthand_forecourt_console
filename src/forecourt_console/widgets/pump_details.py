@@ -149,6 +149,29 @@ class PumpDetails(HorizontalGroup):
         self.query_one("#last_sale_money", PumpDigits).set_value(sale["money"])
         self.query_one("#last_sale_price", PumpDigits).set_value(sale["price"])
 
+    def on_pump_totals(self):
+        if self.pump: total = self.pump.totals[0]
+        else: total = {"volume": 0, "money": 0}
+        
+        self.query_one("#totals_volume", PumpDigits).set_value(total["volume"])
+        self.query_one("#totals_money", PumpDigits).set_value(total["money"])
+
+    def on_pump_prices(self):
+        if self.pump:  price = self.pump.prices[0]
+        else: price = 0.0
+        self.query_one("#grade_price", PumpDigits).set_value(price)
+
+    def on_pump_flow(self):
+        if not self.pump: return
+        with self.query_one("#flow_slider", Slider).prevent(Slider.Changed):
+            self.query_one("#flow_slider", Slider).value = int(self.pump.emulator_flow * 10)
+            self.query_one("#flow_label", Label).update(f"Flow: {self.pump.emulator_flow:.1f}")
+
+    def on_pump_valve(self):
+        if not self.pump: return
+        with self.query_one("#valve_switch", Switch).prevent(Switch.Changed):
+            self.query_one("#valve_switch", Switch).value = self.pump.emulator_valve
+
     def on_pump_rtm_history(self):
         plt_widget = self.query_one(MaximizablePlotextPlot)
         if not plt_widget: return
@@ -223,26 +246,3 @@ class PumpDetails(HorizontalGroup):
             plt_widget.plt.xfrequency(1)
             plt_widget.plt.xticks([])
         plt_widget.refresh()
-
-    def on_pump_totals(self):
-        if self.pump: total = self.pump.totals[0]
-        else: total = {"volume": 0, "money": 0}
-        
-        self.query_one("#totals_volume", PumpDigits).set_value(total["volume"])
-        self.query_one("#totals_money", PumpDigits).set_value(total["money"])
-
-    def on_pump_prices(self):
-        if self.pump:  price = self.pump.prices[0]
-        else: price = 0.0
-        self.query_one("#grade_price", PumpDigits).set_value(price)
-
-    def on_pump_flow(self):
-        if not self.pump: return
-        with self.query_one("#flow_slider", Slider).prevent(Slider.Changed):
-            self.query_one("#flow_slider", Slider).value = int(self.pump.emulator_flow * 10)
-            self.query_one("#flow_label", Label).update(f"Flow: {self.pump.emulator_flow:.1f}")
-
-    def on_pump_valve(self):
-        if not self.pump: return
-        with self.query_one("#valve_switch", Switch).prevent(Switch.Changed):
-            self.query_one("#valve_switch", Switch).value = self.pump.emulator_valve

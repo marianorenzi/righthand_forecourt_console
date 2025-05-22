@@ -1,15 +1,16 @@
 import json
 import time
 from textual.app import ComposeResult
-from textual.widgets import Label, TabPane
+from textual.widgets import Label
+from textual.screen import ModalScreen
 
-class PumpConfigPane(TabPane):
+class PumpConfigModal(ModalScreen):
 
     CSS = """
     Label {
         margin:1 1;
-        width: 100%;
-        height: 100%;
+        width: 80%;
+        height: 80%;
         background: $panel;
         border: tall $primary;
         content-align: center middle;

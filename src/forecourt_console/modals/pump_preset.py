@@ -19,7 +19,7 @@ class PresetModal(ModalScreen):
         grades: List[int] = []
         if self.query_one("#all", Checkbox).value is not True:
             for checkbox in self.query(Checkbox):
-                if checkbox.id is not "all" and checkbox.value:
+                if checkbox.id != "all" and checkbox.value:
                     grades.append(int(str(checkbox.label)))
         self.pump.preset(value, is_money, grades)
         self.app.pop_screen()
