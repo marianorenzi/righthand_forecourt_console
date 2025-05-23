@@ -1,3 +1,4 @@
+from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Label, TabPane, ListView
@@ -40,8 +41,7 @@ class PumpServicePane(TabPane):
     def compose(self) -> ComposeResult:
         yield PumpDetails()
         with Container():
-            yield PumpGrid(self.mqtt_client)
-        yield MqttViewer(self.mqtt_client, auto_scroll=True)
+            yield PumpGrid()
 
     def on_mount(self):
         self.query_one(PumpGrid).focus()
@@ -89,3 +89,48 @@ class PumpServicePane(TabPane):
     def action_change_price(self):
         pump = self.query_one(PumpGrid).highlighted_child
         if pump and isinstance(pump, Pump): self.app.push_screen(PriceChangeModal(pump))
+
+    @on(Pump.StatusEvent)
+    def on_pump_status(self, message: Pump.StatusEvent):
+        self.query_one(PumpDetails).set_pump_status(message.status)
+        message.stop()
+
+    @on(Pump.GradesEvent)
+    def on_pump_grades(self, message: Pump.GradesEvent):
+        self.query_one(PumpDetails).set_pump_grades(message.grades)
+        message.stop()
+
+    @on(Pump.CallingGradeEvent)
+    def on_pump_calling_grade(self, message: Pump.CallingGradeEvent):
+        self.query_one(PumpDetails).set_pump_calling_grade(message.calling_grade)
+        message.stop()
+
+    @on(Pump.SaleEvent)
+    def on_pump_sale(self, message: Pump.SaleEvent):
+        self.query_one(PumpDetails).set_pump_sale(message.sale)
+        message.stop()
+
+    @on(Pump.RtmHistoryEvent)
+    def on_pump_rtm(self, message: Pump.RtmHistoryEvent):
+        self.query_one(PumpDetails).set_pump_rtm_history(message.rtm_history)
+        message.stop()
+
+    @on(Pump.TotalsEvent)
+    def on_pump_totals(self, message: Pump.TotalsEvent):
+        self.query_one(PumpDetails).set_pump_totals(message.totals)
+        message.stop()
+
+    @on(Pump.PricesEvent)
+    def on_pump_prices(self, message: Pump.PricesEvent):
+        self.query_one(PumpDetails).set_pump_prices(message.prices)
+        message.stop()
+
+    @on(Pump.FlowEvent)
+    def on_pump_flow(self, message: Pump.FlowEvent):
+        self.query_one(PumpDetails).set_pump_flow(message.flow)
+        message.stop()
+
+    @on(Pump.ValveEvent)
+    def on_pump_valve(self, message: Pump.ValveEvent):
+        self.query_one(PumpDetails).set_pump_valve(message.valve)
+        message.stop()

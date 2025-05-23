@@ -28,7 +28,7 @@ class MqttClient:
             self.payload = payload
 
     class MqttConnected(Message): pass
-    class MqttDisonnected(Message): pass
+    class MqttDisconnected(Message): pass
 
     def connect(self):
         self.client.connect(self.host, self.port, keepalive=60)
@@ -100,6 +100,7 @@ class MqttViewer(Log):
         self.mqtt_client = mqtt_client
 
     def on_mount(self):
+        return
         self.mqtt_client.subscribe_all(self)
 
     @on(MqttClient.MqttMessage)

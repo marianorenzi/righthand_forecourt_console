@@ -78,26 +78,40 @@ class PumpDetails(HorizontalGroup):
         pass
 
     def set_pump(self, pump: Optional[Pump]):
-        self.set_reactive(PumpDetails.pump, pump)
-        self.mutate_reactive(PumpDetails.pump)
+        # self.set_reactive(PumpDetails.pump, pump)
+        # self.mutate_reactive(PumpDetails.pump)
 
-    def watch_pump(self):
-        # unwatch pump reactives and clear
-        for unwatcher in self.pump_unwatchers:
-            if unwatcher: unwatcher()
-        self.pump_unwatchers.clear()
+        self.pump = pump
 
-        # watch pump reactives
-        if self.pump:
-            self.pump_unwatchers.append(self.watch(self.pump, "status", self.on_pump_status, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "grades", self.on_pump_grades, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "calling_grade", self.on_pump_calling_grade, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "sale", self.on_pump_sale, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "rtm_history", self.on_pump_rtm_history, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "totals", self.on_pump_totals, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "prices", self.on_pump_prices, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "emulator_flow", self.on_pump_flow, True))
-            self.pump_unwatchers.append(self.watch(self.pump, "emulator_valve", self.on_pump_valve, True))
+        if pump:
+            self.set_pump_status(pump.status)
+            self.set_pump_grades(pump.grades)
+            self.set_pump_calling_grade(pump.calling_grade)
+            self.set_pump_sale(pump.sale)
+            self.set_pump_rtm_history(pump.rtm_history)
+            self.set_pump_totals(pump.totals)
+            self.set_pump_prices(pump.prices)
+            self.set_pump_flow(pump.emulator_flow)
+            self.set_pump_valve(pump.emulator_valve)
+
+    # def watch_pump(self):
+    #     return
+    #     # unwatch pump reactives and clear
+    #     for unwatcher in self.pump_unwatchers:
+    #         if unwatcher: unwatcher()
+    #     self.pump_unwatchers.clear()
+
+    #     # watch pump reactives
+    #     if self.pump:
+    #         self.pump_unwatchers.append(self.watch(self.pump, "status", self.on_pump_status, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "grades", self.on_pump_grades, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "calling_grade", self.on_pump_calling_grade, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "sale", self.on_pump_sale, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "rtm_history", self.on_pump_rtm_history, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "totals", self.on_pump_totals, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "prices", self.on_pump_prices, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "emulator_flow", self.on_pump_flow, True))
+    #         self.pump_unwatchers.append(self.watch(self.pump, "emulator_valve", self.on_pump_valve, True))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if self.pump:
@@ -130,53 +144,47 @@ class PumpDetails(HorizontalGroup):
     def on_valve_switch_changed(self, event: Select.Changed) -> None:
         if self.pump: self.pump.force_valve(bool(event.value))
 
-    def on_pump_status(self):
+    def set_pump_status(self, status: str = "closed"):
         if not self.pump: return
 
-    def on_pump_grades(self):
+    def set_pump_grades(self, grades: int = 0):
         if not self.pump: return
 
-    def on_pump_calling_grade(self):
-        if not self.pump: return
+    def set_pump_calling_grade(self, calling_grade: int = -1):
         with self.query_one("#handle_select", Select).prevent(Select.Changed):
-            self.query_one("#handle_select", Select).value = self.pump.calling_grade
+            self.query_one("#handle_select", Select).value = calling_grade
 
-    def on_pump_sale(self):
-        if self.pump: sale = self.pump.sale
-        else: sale = {"volume": 0, "money": 0, "price": 0}
-        
+    def set_pump_sale(self, sale: dict = {"volume": 0, "money": 0, "price": 0}):
         self.query_one("#last_sale_volume", PumpDigits).set_value(sale["volume"])
         self.query_one("#last_sale_money", PumpDigits).set_value(sale["money"])
         self.query_one("#last_sale_price", PumpDigits).set_value(sale["price"])
 
-    def on_pump_totals(self):
-        if self.pump: total = self.pump.totals[0]
+    def set_pump_totals(self, totals: list[dict] = []):
+        if len(totals): total = totals[0]
         else: total = {"volume": 0, "money": 0}
         
         self.query_one("#totals_volume", PumpDigits).set_value(total["volume"])
         self.query_one("#totals_money", PumpDigits).set_value(total["money"])
 
-    def on_pump_prices(self):
-        if self.pump:  price = self.pump.prices[0]
+    def set_pump_prices(self, prices: list[float] = []):
+        if len(prices):  price = prices[0]
         else: price = 0.0
         self.query_one("#grade_price", PumpDigits).set_value(price)
 
-    def on_pump_flow(self):
-        if not self.pump: return
+    def set_pump_flow(self, flow: float = 0.0):
         with self.query_one("#flow_slider", Slider).prevent(Slider.Changed):
-            self.query_one("#flow_slider", Slider).value = int(self.pump.emulator_flow * 10)
-            self.query_one("#flow_label", Label).update(f"Flow: {self.pump.emulator_flow:.1f}")
+            self.query_one("#flow_slider", Slider).value = int(flow * 10)
+            self.query_one("#flow_label", Label).update(f"Flow: {flow:.1f}")
 
-    def on_pump_valve(self):
-        if not self.pump: return
+    def set_pump_valve(self, valve: bool = False):
         with self.query_one("#valve_switch", Switch).prevent(Switch.Changed):
-            self.query_one("#valve_switch", Switch).value = self.pump.emulator_valve
+            self.query_one("#valve_switch", Switch).value = valve
 
-    def on_pump_rtm_history(self):
+    def set_pump_rtm_history(self, rtm_history: list[dict] = []):
         plt_widget = self.query_one(MaximizablePlotextPlot)
         if not plt_widget: return
 
-        if not self.pump: 
+        if len(rtm_history) == 0: 
             plt_widget.plt.clear_data()
             return
         
@@ -234,10 +242,10 @@ class PumpDetails(HorizontalGroup):
             return flows, times
 
         plt_widget.plt.clear_data()
-        if self.pump.rtm_history:
-            times = [d["time"] for d in self.pump.rtm_history]
-            volumes = [d["volume"] for d in self.pump.rtm_history]
-            flows, flow_times = calc_flows(self.pump.rtm_history)
+        if rtm_history:
+            times = [d["time"] for d in rtm_history]
+            volumes = [d["volume"] for d in rtm_history]
+            flows, flow_times = calc_flows(rtm_history)
             plt_widget.plt.plot(times, volumes, marker="fhd", label="Volume", )
             if flows: 
                 smoothed_flows = median_filter(flows, 3)

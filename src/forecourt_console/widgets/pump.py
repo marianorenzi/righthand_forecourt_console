@@ -1,5 +1,6 @@
-from textual import on
 from textual.app import ComposeResult
+from textual import on
+from textual.message import Message
 from textual.widgets import ListItem, Label
 from textual.containers import VerticalGroup, HorizontalGroup
 from textual.reactive import reactive
@@ -9,6 +10,7 @@ import json
 import csv
 import io
 import threading
+import copy
 
 class PumpValue(HorizontalGroup):
 
@@ -41,10 +43,55 @@ class Pump(ListItem):
     emulator_valve: reactive[bool] = reactive(False, init=False)
     emulator_flow: reactive[float] = reactive(0.0, init=False)
 
-    def __init__(self, pump_id: int, mqtt_client: MqttClient, **kwargs):
+    def __init__(self, pump_id: int, **kwargs):
         super().__init__(**kwargs)
         self.pump_id = pump_id
-        self.mqtt_client = mqtt_client
+        self.mqtt_client: MqttClient = self.app.mqtt
+
+    class StatusEvent(Message):
+        def __init__(self, status: str, **kwargs):
+            super().__init__(**kwargs)
+            self.status = status
+
+    class GradesEvent(Message):
+        def __init__(self, grades: int, **kwargs):
+            super().__init__(**kwargs)
+            self.grades = grades
+
+    class CallingGradeEvent(Message):
+        def __init__(self, calling_grade: int, **kwargs):
+            super().__init__(**kwargs)
+            self.calling_grade = calling_grade
+
+    class SaleEvent(Message):
+        def __init__(self, sale: dict, **kwargs):
+            super().__init__(**kwargs)
+            self.sale = sale
+
+    class RtmHistoryEvent(Message):
+        def __init__(self, rtm_history: list[dict], **kwargs):
+            super().__init__(**kwargs)
+            self.rtm_history = rtm_history
+
+    class TotalsEvent(Message):
+        def __init__(self, totals: list[dict], **kwargs):
+            super().__init__(**kwargs)
+            self.totals = totals
+
+    class PricesEvent(Message):
+        def __init__(self, prices: list[float], **kwargs):
+            super().__init__(**kwargs)
+            self.prices = prices
+
+    class FlowEvent(Message):
+        def __init__(self, flow: float, **kwargs):
+            super().__init__(**kwargs)
+            self.flow = flow
+
+    class ValveEvent(Message): 
+        def __init__(self, valve: bool, **kwargs):
+            super().__init__(**kwargs)
+            self.valve = valve
 
     def compose(self) -> ComposeResult:
         yield Label(f"Pump {self.pump_id}", classes="pump_id")
@@ -59,6 +106,116 @@ class Pump(ListItem):
 
     def on_unmount(self):
         self.mqtt_unsubscribe()
+
+    def authorize(self, grades: List[int] = []) -> None:
+
+        output = io.StringIO(newline='')
+        writer = csv.writer(output)
+        writer.writerow(grades)
+        csv_string = output.getvalue()
+        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/auth", csv_string)
+
+    def preset(self, value: float, is_money: bool, grades: List[int] = []) -> None:
+        payload = {}
+        if is_money: payload["money"] = value
+        else: payload["volume"] = value
+        payload["grades"] = grades
+        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/preset", json.dumps(payload))
+
+    def stop(self):
+        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/stop", "")
+
+    def resume(self):
+        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/resume", "")
+
+    def price_change(self, value: float, grade: int) -> None:
+        payload = {"ppu": value, "grade": grade}
+        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/price_change", json.dumps(payload))
+
+    def set_handle(self, handle: int):
+            self.mqtt_client.publish(f"ecmd/pumps/{self.pump_id}/set_handle", f"{handle}")
+
+    def set_flow(self, flow: float):
+            self.mqtt_client.publish(f"ecmd/pumps/{self.pump_id}/set_flow", f"{flow}")
+
+    def force_valve(self, state: bool):
+            self.mqtt_client.publish(f"ecmd/pumps/{self.pump_id}/force_valve", f"{state}")
+
+    def watch_status(self):
+        self.query_one("#pump_status", PumpValue).update(self.status)
+        if self.highlighted:
+            self.post_message(self.StatusEvent(self.status))
+        if self.status == "idle": 
+            self.calling_grade = -1
+            if self.highlighted:
+                self.post_message(self.CallingGradeEvent(self.calling_grade))
+
+    def watch_grades(self):
+        if self.highlighted:
+            self.post_message(self.GradesEvent(self.grades))
+    
+    def watch_calling_grade(self):
+        if self.highlighted:
+            self.post_message(self.CallingGradeEvent(self.calling_grade))
+
+    def watch_totals(self):
+        if self.highlighted:
+            self.post_message(self.TotalsEvent(self.totals.copy()))
+
+    def watch_prices(self):
+        if self.highlighted:
+            self.post_message(self.PricesEvent(self.prices.copy()))
+
+    def watch_rtm_history(self):
+        if self.highlighted:
+            self.post_message(self.RtmHistoryEvent(self.rtm_history.copy()))
+
+    def watch_sale(self):
+        self.query_one("#sale_volume", PumpValue).update(f"{self.sale["volume"]:.3f}")
+        self.query_one("#sale_money", PumpValue).update(f"{self.sale["money"]:.3f}")
+        self.query_one("#sale_price", PumpValue).update(f"{self.sale["price"]:.3f}")
+        if self.highlighted:
+            self.post_message(self.SaleEvent(self.sale.copy()))
+
+    def watch_emulator_flow(self):
+        if self.highlighted:
+            self.post_message(self.FlowEvent(self.emulator_flow))
+
+    def watch_emulator_valve(self):
+        if self.highlighted:
+            self.post_message(self.ValveEvent(self.emulator_valve))
+
+    @on(MqttClient.MqttMessage)
+    def on_mqtt_message(self, message: MqttClient.MqttMessage):
+        if message.topic == f"evt/pumps/{self.pump_id}/status" or message.topic == f"res/pumps/{self.pump_id}/status":
+            self.on_mqtt_status(message.payload)
+        elif message.topic == f"evt/pumps/{self.pump_id}/calling_grade" or message.topic == f"res/pumps/{self.pump_id}/grade":
+            self.on_mqtt_calling_grade(message.payload)
+        elif message.topic == f"evt/pumps/{self.pump_id}/totals" or message.topic == f"res/pumps/{self.pump_id}/totals":
+            self.on_mqtt_totals(message.payload)
+        elif message.topic == f"evt/pumps/{self.pump_id}/ppu" or message.topic == f"res/pumps/{self.pump_id}/ppu":
+            self.on_mqtt_price(message.payload)
+        elif message.topic == f"evt/pumps/{self.pump_id}/sale_start":
+            self.on_mqtt_sale_start(message.payload)
+        elif message.topic == f"evt/pumps/{self.pump_id}/sale_end":
+            self.on_mqtt_sale(message.payload)
+        elif message.topic == f"evt/pumps/{self.pump_id}/rtm":
+            self.on_mqtt_rtm(message.payload)
+        elif message.topic == f"eevt/pumps/{self.pump_id}/flow":
+            self.on_mqtt_flow(message.payload)
+        elif message.topic == f"eevt/pumps/{self.pump_id}/valve":
+            self.on_mqtt_valve(message.payload)
+        elif message.topic == f"res/pumps/{self.pump_id}/grades":
+            self.on_mqtt_grades(message.payload)
+        elif message.topic == f"res/pumps/{self.pump_id}/sale":
+            self.on_mqtt_sale(message.payload)
+        elif message.topic == f"res/pumps/{self.pump_id}/type":
+            self.on_mqtt_type(message.payload)
+        else:
+            return
+        
+        # message handled, stop the message from bubbling
+        message.stop()
 
     def mqtt_subscribe(self):
         self.mqtt_client.subscribe(f"evt/pumps/{self.pump_id}/status", self)
@@ -104,89 +261,6 @@ class Pump(ListItem):
         # subscribe to on_connect
         self.mqtt_client.unsubscribe_on_connect(self.on_mqtt_connect)
 
-    def authorize(self, grades: List[int] = []) -> None:
-
-        output = io.StringIO(newline='')
-        writer = csv.writer(output)
-        writer.writerow(grades)
-        csv_string = output.getvalue()
-        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/auth", csv_string)
-
-    def preset(self, value: float, is_money: bool, grades: List[int] = []) -> None:
-        payload = {}
-        if is_money: payload["money"] = value
-        else: payload["volume"] = value
-        payload["grades"] = grades
-        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/preset", json.dumps(payload))
-
-    def stop(self):
-        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/stop", "")
-
-    def resume(self):
-        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/resume", "")
-
-    def price_change(self, value: float, grade: int) -> None:
-        payload = {"ppu": value, "grade": grade}
-        self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/price_change", json.dumps(payload))
-
-    def set_handle(self, handle: int):
-            self.mqtt_client.publish(f"ecmd/pumps/{self.pump_id}/set_handle", f"{handle}")
-
-    def set_flow(self, flow: float):
-            self.mqtt_client.publish(f"ecmd/pumps/{self.pump_id}/set_flow", f"{flow}")
-
-    def force_valve(self, state: bool):
-            self.mqtt_client.publish(f"ecmd/pumps/{self.pump_id}/force_valve", f"{state}")
-
-    def watch_status(self):
-        self.query_one("#pump_status", PumpValue).update(self.status)
-        if self.status == "idle": self.calling_grade = -1
-
-    def watch_grades(self):
-        # TODO
-        pass
-    
-    def watch_calling_grade(self):
-        # TODO
-        pass
-
-    def watch_sale(self):
-        self.query_one("#sale_volume", PumpValue).update(f"{self.sale["volume"]:.3f}")
-        self.query_one("#sale_money", PumpValue).update(f"{self.sale["money"]:.3f}")
-        self.query_one("#sale_price", PumpValue).update(f"{self.sale["price"]:.3f}")
-
-    @on(MqttClient.MqttMessage)
-    def on_mqtt_message(self, message: MqttClient.MqttMessage):
-        if message.topic == f"evt/pumps/{self.pump_id}/status" or message.topic == f"res/pumps/{self.pump_id}/status":
-            self.on_mqtt_status(message.payload)
-        elif message.topic == f"evt/pumps/{self.pump_id}/calling_grade" or message.topic == f"res/pumps/{self.pump_id}/grade":
-            self.on_mqtt_calling_grade(message.payload)
-        elif message.topic == f"evt/pumps/{self.pump_id}/totals" or message.topic == f"res/pumps/{self.pump_id}/totals":
-            self.on_mqtt_totals(message.payload)
-        elif message.topic == f"evt/pumps/{self.pump_id}/ppu" or message.topic == f"res/pumps/{self.pump_id}/ppu":
-            self.on_mqtt_price(message.payload)
-        elif message.topic == f"evt/pumps/{self.pump_id}/sale_start":
-            self.on_mqtt_sale_start(message.payload)
-        elif message.topic == f"evt/pumps/{self.pump_id}/sale_end":
-            self.on_mqtt_sale(message.payload)
-        elif message.topic == f"evt/pumps/{self.pump_id}/rtm":
-            self.on_mqtt_rtm(message.payload)
-        elif message.topic == f"eevt/pumps/{self.pump_id}/flow":
-            self.on_mqtt_flow(message.payload)
-        elif message.topic == f"eevt/pumps/{self.pump_id}/valve":
-            self.on_mqtt_valve(message.payload)
-        elif message.topic == f"res/pumps/{self.pump_id}/grades":
-            self.on_mqtt_grades(message.payload)
-        elif message.topic == f"res/pumps/{self.pump_id}/sale":
-            self.on_mqtt_sale(message.payload)
-        elif message.topic == f"res/pumps/{self.pump_id}/type":
-            self.on_mqtt_type(message.payload)
-        else:
-            return
-        
-        # message handled, stop the message from bubbling
-        message.stop()
-
     def on_mqtt_connect(self, rc):
         # request data to MQTT
         self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/type", "")
@@ -225,7 +299,7 @@ class Pump(ListItem):
         self.on_mqtt_sale(payload)
 
         # remove undesired data for rtm
-        if self.rtm_history and self.rtm_history[-1]["time"] != rtm["time"]:
+        if len(self.rtm_history) == 0 or self.rtm_history[-1]["time"] != rtm["time"]:
             del rtm["grade"]
             del rtm["money"]
             self.rtm_history.append(rtm)

@@ -16,6 +16,8 @@ class RightHandForecourtConsole(App):
     
     CSS_PATH = "style.tcss"
 
+    mqtt: MqttClient
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.mqtt = MqttClient()
