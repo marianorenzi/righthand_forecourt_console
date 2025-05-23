@@ -15,7 +15,7 @@ from typing import Optional
 
 class PumpDetails(HorizontalGroup):
 
-    pump: reactive[Optional[Pump]] = reactive(None, init=False)
+    pump: reactive[Pump | None] = reactive(None, init=False)
     pump_unwatchers = []
 
     def compose(self) -> ComposeResult:
@@ -117,7 +117,7 @@ class PumpDetails(HorizontalGroup):
         if self.pump:
             # pump actions
             if event.button.id == "auth_button":
-                self.pump.authorize()
+                self.pump.authorize([])
             if event.button.id == "auth_grades_button":
                 self.app.push_screen(AuthGradesModal(self.pump))
             if event.button.id == "preset_button":
@@ -159,14 +159,14 @@ class PumpDetails(HorizontalGroup):
         self.query_one("#last_sale_money", PumpDigits).set_value(sale["money"])
         self.query_one("#last_sale_price", PumpDigits).set_value(sale["price"])
 
-    def set_pump_totals(self, totals: list[dict] = []):
+    def set_pump_totals(self, totals: list[dict]):
         if len(totals): total = totals[0]
         else: total = {"volume": 0, "money": 0}
         
         self.query_one("#totals_volume", PumpDigits).set_value(total["volume"])
         self.query_one("#totals_money", PumpDigits).set_value(total["money"])
 
-    def set_pump_prices(self, prices: list[float] = []):
+    def set_pump_prices(self, prices: list[float]):
         if len(prices):  price = prices[0]
         else: price = 0.0
         self.query_one("#grade_price", PumpDigits).set_value(price)
@@ -180,7 +180,7 @@ class PumpDetails(HorizontalGroup):
         with self.query_one("#valve_switch", Switch).prevent(Switch.Changed):
             self.query_one("#valve_switch", Switch).value = valve
 
-    def set_pump_rtm_history(self, rtm_history: list[dict] = []):
+    def set_pump_rtm_history(self, rtm_history: list[dict]):
         plt_widget = self.query_one(MaximizablePlotextPlot)
         if not plt_widget: return
 

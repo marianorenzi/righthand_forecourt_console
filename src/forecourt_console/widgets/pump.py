@@ -33,20 +33,30 @@ class PumpValue(HorizontalGroup):
 class Pump(ListItem):
 
     pump_type = ""
-    status: reactive[str] = reactive("closed", init=False)
-    grades: reactive[int] = reactive(0, init=False)
-    calling_grade: reactive[int] = reactive(-1, init=False)
-    sale: reactive[dict] = reactive({"volume": 0.0, "money": 0.0, "price": 0.0}, init=False)
-    totals: reactive[list[dict]] = reactive([{"volume":0.0,"money":0.0} for _ in range(8)], init=False)
-    prices: reactive[list[float]] = reactive([0.0 for _ in range(8)], init=False)
-    rtm_history: reactive[list[dict]] = reactive(list[dict], init=False)
-    emulator_valve: reactive[bool] = reactive(False, init=False)
-    emulator_flow: reactive[float] = reactive(0.0, init=False)
+    status = reactive(str, init=False)
+    grades = reactive(int, init=False)
+    calling_grade = reactive(int, init=False)
+    sale = reactive(dict, init=False)
+    totals = reactive(list[dict], init=False)
+    prices = reactive(list[float], init=False)
+    rtm_history = reactive(list[dict], init=False)
+    emulator_valve = reactive(bool, init=False)
+    emulator_flow = reactive(float, init=False)
 
     def __init__(self, pump_id: int, **kwargs):
         super().__init__(**kwargs)
         self.pump_id = pump_id
         self.mqtt_client: MqttClient = self.app.mqtt
+
+        self.set_reactive(Pump.status, "closed") #type: ignore
+        self.set_reactive(Pump.grades, 0) #type: ignore
+        self.set_reactive(Pump.calling_grade, -1) #type: ignore
+        self.set_reactive(Pump.sale, {"volume": 0.0, "money": 0.0, "price": 0.0})
+        self.set_reactive(Pump.totals, [{"volume":0.0,"money":0.0} for _ in range(8)])
+        self.set_reactive(Pump.prices, [0.0 for _ in range(8)])
+        self.set_reactive(Pump.rtm_history, []) #type: ignore
+        self.set_reactive(Pump.emulator_valve, False) #type: ignore
+        self.set_reactive(Pump.emulator_flow, 0.0) #type: ignore
 
     class StatusEvent(Message):
         def __init__(self, status: str, **kwargs):
@@ -107,7 +117,7 @@ class Pump(ListItem):
     def on_unmount(self):
         self.mqtt_unsubscribe()
 
-    def authorize(self, grades: List[int] = []) -> None:
+    def authorize(self, grades: List[int]) -> None:
 
         output = io.StringIO(newline='')
         writer = csv.writer(output)
@@ -115,7 +125,7 @@ class Pump(ListItem):
         csv_string = output.getvalue()
         self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/auth", csv_string)
 
-    def preset(self, value: float, is_money: bool, grades: List[int] = []) -> None:
+    def preset(self, value: float, is_money: bool, grades: List[int]) -> None:
         payload = {}
         if is_money: payload["money"] = value
         else: payload["volume"] = value
