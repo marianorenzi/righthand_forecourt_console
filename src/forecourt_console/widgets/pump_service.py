@@ -35,7 +35,7 @@ class PumpServicePane(TabPane):
     Binding("6", "handle_pump(5)", "Handle 6", show=False),
     Binding("7", "handle_pump(6)", "Handle 7", show=False),
     Binding("8", "handle_pump(7)", "Handle 8", show=False),
-    ("p", "maximize_plot", "Maximize Plot")
+    ("g", "maximize_plot", "Maximize Plot")
     ]
         
     def compose(self) -> ComposeResult:
@@ -45,6 +45,9 @@ class PumpServicePane(TabPane):
 
     def on_mount(self):
         self.query_one(PumpGrid).focus()
+
+    def set_auto_sale_config(self, auto_sale_config: dict):
+        self.query_one(PumpGrid).set_auto_sale_config(auto_sale_config)
 
     def on_list_view_selected(self, event: ListView.Selected):
         if isinstance(event.item, Pump):
@@ -68,7 +71,7 @@ class PumpServicePane(TabPane):
 
     def action_auth_pump(self):
         pump = self.query_one(PumpGrid).highlighted_child
-        if pump and isinstance(pump, Pump): pump.authorize()
+        if pump and isinstance(pump, Pump): pump.authorize([])
 
     def action_stop_pump(self):
         pump = self.query_one(PumpGrid).highlighted_child

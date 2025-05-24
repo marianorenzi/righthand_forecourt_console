@@ -52,3 +52,12 @@ class PumpGrid(ListView):
         if len(self.children) > 0 and isinstance(self.children[0], Pump):
             self.index = 0
             self.post_message(ListView.Selected(self, self.children[0]))
+
+    def set_auto_sale_config(self, auto_sale_config: dict):
+        if auto_sale_config["pumps"] == 0:
+            # all pumps
+            for pump in self.query(Pump):
+                pump.set_auto_sale_config(auto_sale_config)
+        elif self.index != None:
+            pump = self.children[self.index]
+            if isinstance(pump, Pump): pump.set_auto_sale_config(auto_sale_config)

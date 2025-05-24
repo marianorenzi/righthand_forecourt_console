@@ -129,7 +129,7 @@ class PumpDetails(HorizontalGroup):
             if event.button.id == "change_price_button":
                 self.app.push_screen(PriceChangeModal(self.pump))
             if event.button.id == "auto_sale_button":
-                self.app.push_screen(AutoSaleModal())
+                self.app.push_screen(AutoSaleModal(), self.parent.set_auto_sale_config)
 
     @on(Slider.Changed, "#flow_slider")
     def on_flow_slider_changed_value(self) -> None:

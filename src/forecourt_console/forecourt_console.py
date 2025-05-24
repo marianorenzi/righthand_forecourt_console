@@ -8,6 +8,7 @@ from textual.containers import Horizontal
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Label, TabbedContent
 from widgets.pump_service import PumpServicePane
+from widgets.sales_monitor import SalesMonitorPane
 from widgets.mqtt_console import MqttClientPane
 from widgets.mqtt_console import MqttClient
 import threading
@@ -30,7 +31,7 @@ class RightHandForecourtConsole(App):
         yield Header(show_clock=True)
         with TabbedContent(initial="pump_service"):
             yield PumpServicePane("Pump Service", self.mqtt, id="pump_service")
-            yield MqttClientPane(self.mqtt, title="MQTT Console", id="mqtt_console")
+            yield SalesMonitorPane(title="Sales Monitor", id="sales_monitor")
         with Horizontal(id="new_footer"):
             with Horizontal(id="new_inner"):
                 yield Footer()

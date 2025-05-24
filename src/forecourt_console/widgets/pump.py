@@ -9,7 +9,7 @@ from typing import List
 import json
 import csv
 import io
-import threading
+import random
 import copy
 
 class PumpValue(HorizontalGroup):
@@ -46,8 +46,9 @@ class Pump(ListItem):
     def __init__(self, pump_id: int, **kwargs):
         super().__init__(**kwargs)
         self.pump_id = pump_id
-        self.mqtt_client: MqttClient = self.app.mqtt
+        self.mqtt_client: MqttClient = self.app.mqtt # type: ignore
 
+        # reactive pump data
         self.set_reactive(Pump.status, "closed") #type: ignore
         self.set_reactive(Pump.grades, 0) #type: ignore
         self.set_reactive(Pump.calling_grade, -1) #type: ignore
@@ -57,6 +58,11 @@ class Pump(ListItem):
         self.set_reactive(Pump.rtm_history, []) #type: ignore
         self.set_reactive(Pump.emulator_valve, False) #type: ignore
         self.set_reactive(Pump.emulator_flow, 0.0) #type: ignore
+
+        # auto sale
+        self.auto_sale_config = {"auth_types": [], "grades": []}
+        self.preset_value: float = 0.0
+        self.preset_is_money: bool = False
 
     class StatusEvent(Message):
         def __init__(self, status: str, **kwargs):
@@ -118,12 +124,13 @@ class Pump(ListItem):
         self.mqtt_unsubscribe()
 
     def authorize(self, grades: List[int]) -> None:
-
         output = io.StringIO(newline='')
         writer = csv.writer(output)
         writer.writerow(grades)
         csv_string = output.getvalue()
         self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/auth", csv_string)
+        # register auth for auto sale
+        self.set_auto_sale_auth()
 
     def preset(self, value: float, is_money: bool, grades: List[int]) -> None:
         payload = {}
@@ -131,6 +138,8 @@ class Pump(ListItem):
         else: payload["volume"] = value
         payload["grades"] = grades
         self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/preset", json.dumps(payload))
+        # register auth for auto sale
+        self.set_auto_sale_auth(value, is_money)
 
     def stop(self):
         self.mqtt_client.publish(f"cmd/pumps/{self.pump_id}/stop", "")
@@ -284,6 +293,8 @@ class Pump(ListItem):
 
     def on_mqtt_status(self, payload: str):
         self.status = payload
+        # report for auto sale processing
+        self.do_auto_sale_status()
 
     def on_mqtt_grades(self, payload: str):
         self.grades = int(payload)
@@ -315,6 +326,9 @@ class Pump(ListItem):
             self.rtm_history.append(rtm)
             self.mutate_reactive(Pump.rtm_history) # type: ignore
 
+        # report for auto sale processing
+        self.do_auto_sale_rtm()
+
     def on_mqtt_totals(self, payload: str):
         total = json.loads(payload)
         totalAux = {"volume": total["volume"], "money": total["money"]}
@@ -341,3 +355,56 @@ class Pump(ListItem):
 
     def on_mqtt_valve(self, payload: str):
         self.emulator_valve = bool(payload == '1')
+
+    def set_auto_sale_config(self, auto_sale_config: dict):
+        self.auto_sale_config = auto_sale_config
+        # evaluate status this first time
+        self.do_auto_sale_status()
+
+    def set_auto_sale_auth(self, value: float = 0, is_money: bool = False):
+        self.preset_value = value
+        self.preset_is_money = is_money
+
+    def do_auto_sale_status(self):
+        if self.status.lower() == "idle":
+            self.do_auto_sale_idle()
+        elif self.status.lower() == "calling":
+            self.do_auto_sale_calling()
+        elif self.status.lower() == "fueling":
+            self.do_auto_sale_fuelilng()
+
+    def do_auto_sale_idle(self):
+        # if pump type is emulator and auto sale handle is enabled
+        if self.pump_type == "emulator" and len(self.auto_sale_config["grades"]) > 0:
+            # set random handle between selected handles
+            self.set_handle(random.randint(0, len(self.auto_sale_config["grades"])-1))
+
+    def do_auto_sale_calling(self):
+        # if auto sale auth is disabled, return
+        if len(self.auto_sale_config["auth_types"]) == 0: return
+
+        # select random auth from enabled types
+        auth_type = self.auto_sale_config["auth_types"][random.randint(0, len(self.auto_sale_config["auth_types"])-1)]
+
+        # fill-up
+        if auth_type == 0:
+            self.authorize([])
+        # volume preset
+        elif auth_type == 1:
+            self.preset(round(random.uniform(self.auto_sale_config["volume_min"], self.auto_sale_config["volume_max"]), 2), False, []) # type: ignore
+        # money preset
+        elif auth_type == 2:
+            self.preset(round(random.uniform(self.auto_sale_config["money_min"], self.auto_sale_config["money_max"]), 2), True, []) # type: ignore
+
+    def do_auto_sale_fuelilng(self):
+        # decide max end time?
+        # launch flow timer?
+        pass
+
+    def do_auto_sale_rtm(self):
+        # ignore if it's not a preset
+        if self.preset_value == 0: return
+        # check completed preset
+        if ((self.preset_is_money and self.sale["money"] >= self.preset_value) or
+            self.sale["volume"] >= self.preset_value):
+                self.set_handle(-1)

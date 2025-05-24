@@ -38,7 +38,11 @@ class PriceChangeModal(ModalScreen):
 
     def on_key(self, event: Key):
         if event.key == "escape":
+            event.stop()
             self.app.pop_screen()
+        if event.key == "enter":
+            event.stop()
+            self.do_price_change()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "accept":

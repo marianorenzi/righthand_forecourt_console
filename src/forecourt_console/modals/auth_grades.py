@@ -16,7 +16,7 @@ class AuthGradesModal(ModalScreen):
         if self.query_one("#all", Checkbox).value is not True:
             for checkbox in self.query(Checkbox):
                 if checkbox.id != "all" and checkbox.value:
-                    grades.append(int(str(checkbox.label)))
+                    grades.append(int(str(checkbox.label))-1)
         self.pump.authorize(grades)
         self.app.pop_screen()
 
@@ -52,7 +52,11 @@ class AuthGradesModal(ModalScreen):
 
     def on_key(self, event: Key):
         if event.key == "escape":
+            event.stop()
             self.app.pop_screen()
+        if event.key == "enter":
+            event.stop()
+            self.do_auth()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "accept":
