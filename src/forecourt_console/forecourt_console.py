@@ -2,50 +2,43 @@
 import paho.mqtt.client as mqtt
 from typing import Iterable
 from datetime import datetime, timedelta
-from textual import work
+from textual import on, work
 from textual.app import App, ComposeResult, SystemCommand
 from textual.containers import Horizontal
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Label, TabbedContent
 from widgets.pump_service import PumpServicePane
 from widgets.sales_monitor import SalesMonitorPane
-from widgets.mqtt_console import MqttClientPane
-from widgets.mqtt_console import MqttClient
+from widgets.textual_mqtt import MqttClient, MqttConnectionSubscription
 import threading
 
 class RightHandForecourtConsole(App):
     
     CSS_PATH = "style.tcss"
 
-    mqtt: MqttClient
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.mqtt = MqttClient()
-
-    @work(thread=True, group="mqtt")
-    def start_mqtt(self):
-        self.mqtt.connect()
 
     def compose(self) -> ComposeResult:
+        yield MqttClient()
         yield Header(show_clock=True)
         with TabbedContent(initial="pump_service"):
-            yield PumpServicePane("Pump Service", self.mqtt, id="pump_service")
+            yield PumpServicePane("Pump Service", id="pump_service")
             yield SalesMonitorPane(title="Sales Monitor", id="sales_monitor")
         with Horizontal(id="new_footer"):
             with Horizontal(id="new_inner"):
                 yield Footer()
             yield Label("🔴 MQTT Disconnected", id="mqtt_status")
+        yield MqttConnectionSubscription()
 
     def on_mount(self) -> None:
-        self.start_mqtt()
         self.title = "RightHand Forecourt Console"
-        self.mqtt.subscribe_on_connect(self.on_mqtt_connect)
-        self.mqtt.subscribe_on_disconnect(self.on_mqtt_disconnect)
 
+    @on(MqttConnectionSubscription.MqttConnected)
     def on_mqtt_connect(self, rc):
         self.query_one("#mqtt_status", Label).update("🟢 MQTT Connected")
 
+    @on(MqttConnectionSubscription.MqttDisconnected)
     def on_mqtt_disconnect(self):
         self.query_one("#mqtt_status", Label).update("🔴 MQTT Disconnected")
 

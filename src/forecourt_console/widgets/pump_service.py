@@ -6,16 +6,14 @@ from textual.containers import Container
 from widgets.pump_details import PumpDetails
 from widgets.pump_grid import PumpGrid
 from widgets.pump import Pump
-from widgets.mqtt_console import MqttViewer
-from widgets.mqtt_console import MqttClient
 from widgets.maximizable_plot import MaximizablePlotextPlot
 from modals.pump_preset import PresetModal
 from modals.price_change import PriceChangeModal
+from typing import Optional
 
 class PumpServicePane(TabPane):
-    def __init__(self, title: str, mqtt_client: MqttClient, **kwargs):
+    def __init__(self, title: str, **kwargs):
         super().__init__(title, **kwargs)
-        self.mqtt_client = mqtt_client
 
     BINDINGS = [
     ("[", "prev_pump", "Previous Pump"),
@@ -46,8 +44,8 @@ class PumpServicePane(TabPane):
     def on_mount(self):
         self.query_one(PumpGrid).focus()
 
-    def set_auto_sale_config(self, auto_sale_config: dict):
-        self.query_one(PumpGrid).set_auto_sale_config(auto_sale_config)
+    def set_auto_sale_config(self, auto_sale_config: Optional[dict]):
+        if auto_sale_config: self.query_one(PumpGrid).set_auto_sale_config(auto_sale_config)
 
     def on_list_view_selected(self, event: ListView.Selected):
         if isinstance(event.item, Pump):

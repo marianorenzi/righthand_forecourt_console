@@ -58,7 +58,7 @@ AuthGradesModal > Grid {
 }
 
 AutoSaleModal > Grid {
-    height: 38;
+    height: 41;
 }
 
 AutoSaleModal HorizontalGroup.preset Checkbox {
@@ -76,7 +76,7 @@ AutoSaleModal Label {
 }
 
 AutoSaleModal Select {
-    width: 15;
+    width: 20;
 }
 
 AutoSaleModal Input {
@@ -95,17 +95,26 @@ PumpGrid {
     background: green 20%;
     color: green;
     border: solid green;
-    layout: grid;
-    align: left top;
-    grid-gutter: 1 2;
-    grid-size: 10;
-    height: auto;
-}
 
-Pump {
-    background: red 20%;
-    color: red;
-    border: solid red;
+    & > ListView {
+        layout: grid;
+        align: left top;
+        grid-gutter: 1 2;
+        grid-size: 10;
+        height: auto;
+
+        & > Pump {
+            background: red 20%;
+            color: red;
+            border: solid red;
+
+            &.-highlight {
+                background: purple 20%;
+                color: purple;
+                border: solid purple;
+            }
+        }
+    }
 }
 
 PumpServicePane MqttViewer {

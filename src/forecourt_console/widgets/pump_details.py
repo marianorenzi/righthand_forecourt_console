@@ -4,6 +4,7 @@ from textual.containers import HorizontalGroup, HorizontalScroll, VerticalGroup,
 from textual.widgets import Button, Label, Select, Switch, Static
 from textual.reactive import reactive
 from textual_slider import Slider
+# from widgets.pump_service import PumpServicePane
 from widgets.pump import Pump
 from widgets.pump_digits import PumpDigits
 from widgets.maximizable_plot import MaximizablePlotextPlot
@@ -129,7 +130,9 @@ class PumpDetails(HorizontalGroup):
             if event.button.id == "change_price_button":
                 self.app.push_screen(PriceChangeModal(self.pump))
             if event.button.id == "auto_sale_button":
-                self.app.push_screen(AutoSaleModal(), self.parent.set_auto_sale_config)
+                pump_service = self.parent
+                # if isinstance(pump_service, PumpServicePane):
+                self.app.push_screen(AutoSaleModal(), pump_service.set_auto_sale_config)
 
     @on(Slider.Changed, "#flow_slider")
     def on_flow_slider_changed_value(self) -> None:

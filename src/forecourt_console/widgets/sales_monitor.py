@@ -2,7 +2,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.widgets import Label, TabPane, DataTable
 from textual.containers import Container
-from widgets.mqtt_console import MqttClient
+from widgets.textual_mqtt import MqttMessageSubscription
 import json
 
 class SalesMonitorPane(TabPane):
@@ -14,14 +14,15 @@ class SalesMonitorPane(TabPane):
 
     def compose(self) -> ComposeResult:
         yield DataTable()
+        yield MqttMessageSubscription("evt/pumps/+/sale_end")
 
     def on_mount(self) -> None:
         self.query_one(DataTable).add_columns(*self.COLUMNS)
-        self.app.mqtt.subscribe(f"evt/pumps/+/sale_end", self)
 
-    @on(MqttClient.MqttMessage)
-    def on_mqtt_message(self, message: MqttClient.MqttMessage):
+    @on(MqttMessageSubscription.MqttMessageEvent)
+    def on_mqtt_message(self, evt: MqttMessageSubscription.MqttMessageEvent):
+        evt.stop()
         # parse sale
-        topic = message.topic.split("/")
-        sale = json.loads(message.payload)
+        topic = evt.topic.split("/")
+        sale = json.loads(evt.payload)
         self.query_one(DataTable).add_row(*(topic[2], sale["grade"], sale["volume"], sale["money"], sale["price"], sale["start_time"], sale["end_time"]))
