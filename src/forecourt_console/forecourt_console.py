@@ -9,7 +9,7 @@ from textual.screen import Screen
 from textual.widgets import Header, Footer, Label, TabbedContent
 from widgets.pump_service import PumpServicePane
 from widgets.sales_monitor import SalesMonitorPane
-from widgets.textual_mqtt import MqttClient, MqttConnectionSubscription
+from widgets.textual_mqtt import MqttClient, MqttConnectionSubscription, MqttMessageSubscription
 import threading
 
 class RightHandForecourtConsole(App):
@@ -33,6 +33,10 @@ class RightHandForecourtConsole(App):
 
     def on_mount(self) -> None:
         self.title = "RightHand Forecourt Console"
+
+    def on_ready(self):
+        for sub in self.query(MqttMessageSubscription):
+            sub.on_ready()
 
     @on(MqttConnectionSubscription.MqttConnected)
     def on_mqtt_connect(self, rc):

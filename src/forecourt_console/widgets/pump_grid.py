@@ -1,9 +1,7 @@
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Grid, ItemGrid, Container
+from textual.containers import Container
 from textual.widgets import ListView, ListItem
-from textual.message import Message
-from textual.reactive import reactive
 from widgets.pump import Pump
 from widgets.textual_mqtt import MqttMessageSubscription, MqttConnectionSubscription, MqttEvent
 import json
@@ -22,18 +20,29 @@ class PumpGrid(Container):
         yield MqttConnectionSubscription()
 
     @on(MqttConnectionSubscription.MqttConnected)
+    def on_mqtt_connect(self, evt: MqttConnectionSubscription.MqttConnected):
+        evt.stop()
+        evt.control.publish(f"cmd/pumps/0/ids")
+
     @on(MqttMessageSubscription.MqttMessageEvent, "#connection_established")
-    def on_mqtt_connect(self, evt: MqttEvent):
+    def on_mqtt_connection_established(self, evt: MqttMessageSubscription.MqttMessageEvent):
+        evt.stop()
         evt.control.publish(f"cmd/pumps/0/ids")
 
     @on(MqttMessageSubscription.MqttMessageEvent, "#ids")
-    # @on(MqttMessageSubscription.MqttMessageEvent)
     def on_mqtt_ids(self, evt: MqttMessageSubscription.MqttMessageEvent):
+        evt.stop()
         try:
             self.existing_pumps = json.loads(evt.payload)
             self.mount_pumps()
         except Exception as e:
             self.log.error(f"Error ON MQTT IDs: Payload={evt.payload}. {e}")
+
+    @on(MqttMessageSubscription.MqttMessageEvent)
+    def on_mqtt_message(self, evt: MqttMessageSubscription.MqttMessageEvent):
+        evt.stop()
+        self.notify(f"ID: {evt.control.id}, Topic: {evt.topic}, Payload: {evt.payload.replace("[", "").replace("]", "")}", title="PumpGrid MQTT Message")
+        self.log.debug("PumpGrid MQTT Message", evt_id=evt.control.id, topic=evt.topic, payload=evt.payload)
 
     def mount_pumps(self):
         # remove current pump widgets

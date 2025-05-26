@@ -37,10 +37,26 @@ class MqttClient(Widget):
         self.connect()
 
     @work(thread=True, group="mqtt")
-    def connect(self):
-        self.client.connect(self.host, self.port, keepalive=60)
-        while (not get_current_worker().is_cancelled):
-            self.client.loop()
+    async def connect(self):
+        try:
+            self.ready = self.app._dom_ready  # type: ignore[unused-ignore]
+        except NoActiveAppError:
+            raise NoActiveAppError("No active app. Window manager has launched too early. Library bug.")
+        except Exception as e:
+            self.log.error(f"Error: {e}")
+            raise e
+        else:
+            while not self.ready:
+                await asyncio.sleep(0.2)
+                self.ready = self.app._dom_ready  # type: ignore[unused-ignore]
+                if not self.ready:
+                    self.log("DOM not ready yet. Retrying...")
+
+            self.log.debug("DOM is ready.")
+
+            self.client.connect(self.host, self.port, keepalive=60)
+            while (not get_current_worker().is_cancelled):
+                self.client.loop()
 
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         for topic in self.subscribers:
@@ -132,59 +148,43 @@ class MqttMessageSubscription(MqttSubscription):
             self.topic = topic
             self.payload = payload
 
-    @work(group="dom_watcher")
-    async def wait_for_dom_and_susbcribe(self) -> None:
-        try:
-            self.ready = self.app._dom_ready  # type: ignore[unused-ignore]
-        except NoActiveAppError:
-            raise NoActiveAppError("No active app. Window manager has launched too early. Library bug.")
-        except Exception as e:
-            self.log.error(f"Error: {e}")
-            raise e
-        else:
-            while not self.ready:
-                await asyncio.sleep(0.2)
-                self.ready = self.app._dom_ready  # type: ignore[unused-ignore]
-                if not self.ready:
-                    self.log("DOM not ready yet. Retrying...")
-
-            self.log.debug("DOM is ready.")
-
-            # subscribe to MqttClient
-            client = self.client()
-            if client:
-                client.subscribe(self.pattern, None, self.on_message)
-
     def on_mount(self) -> None:
-        # self.wait_for_dom_and_susbcribe()
+        return
         # subscribe to MqttClient
         client = self.client()
         if client:
             client.subscribe(self.pattern, None, self.on_message)
 
     def on_unmount(self) -> None:
-        client = self.client()
         # unsubscribe to MqttClient
+        client = self.client()
         if client:
             client.unsubscribe(self.pattern)
 
     def on_message(self, client, userdata, msg: mqtt.MQTTMessage):
         self.post_message(self.MqttMessageEvent(self, msg.topic, msg.payload.decode()))
 
+    def on_ready(self):
+        # subscribe to MqttClient
+        client = self.client()
+        if client:
+            client.subscribe(self.pattern, None, self.on_message)
+
+
 class MqttConnectionSubscription(MqttSubscription):
     class MqttConnected(MqttEvent): pass
     class MqttDisconnected(MqttEvent): pass
 
     def on_mount(self) -> None:
-        client = self.client()
         # subscribe to MqttClient
+        client = self.client()
         if client:
             client.subscribe_on_connect(self.on_connect)
             client.subscribe_on_disconnect(self.on_disconnect)
 
     def on_unmount(self) -> None:
-        client = self.client()
         # subscribe to MqttClient
+        client = self.client()
         if client:
             client.unsubscribe_on_connect(self.on_connect)
             client.unsubscribe_on_disconnect(self.on_disconnect)

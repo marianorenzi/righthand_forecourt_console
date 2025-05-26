@@ -335,6 +335,11 @@ class Pump(ListItem):
         evt.stop()
         self.emulator_valve = bool(evt.payload == '1')
 
+    @on(MqttMessageSubscription.MqttMessageEvent)
+    def on_mqtt_message(self, evt: MqttMessageSubscription.MqttMessageEvent):
+        evt.stop()
+        self.notify(f"Topic: {evt.topic}, Payload: {evt.payload}")
+
     def set_auto_sale_config(self, auto_sale_config: dict):
         self.auto_sale_config = auto_sale_config
         # evaluate status this first time
