@@ -204,9 +204,9 @@ class Pump(ListItem):
             self.post_message(self.RtmHistoryEvent(self.rtm_history.copy()))
 
     def watch_sale(self):
-        self.query_one("#sale_volume", PumpValue).update(f"{self.sale["volume"]:.3f}")
-        self.query_one("#sale_money", PumpValue).update(f"{self.sale["money"]:.3f}")
-        self.query_one("#sale_price", PumpValue).update(f"{self.sale["price"]:.3f}")
+        self.query_one("#sale_volume", PumpValue).update(f"{self.sale['volume']:.3f}")
+        self.query_one("#sale_money", PumpValue).update(f"{self.sale['money']:.3f}")
+        self.query_one("#sale_price", PumpValue).update(f"{self.sale['price']:.3f}")
         if self.highlighted:
             self.post_message(self.SaleEvent(self.sale.copy()))
 
