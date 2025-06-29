@@ -4,7 +4,7 @@ from textual.message import Message
 from textual.widgets import ListItem, Label
 from textual.containers import VerticalGroup, HorizontalGroup
 from textual.reactive import reactive
-from widgets.textual_mqtt import MqttMessageSubscription, MqttConnectionSubscription
+from textual_mqtt import MqttMessageSubscription, MqttConnectionSubscription
 from typing import List
 import json
 import csv
@@ -337,8 +337,28 @@ class Pump(ListItem):
 
     @on(MqttMessageSubscription.MqttMessageEvent)
     def on_mqtt_message(self, evt: MqttMessageSubscription.MqttMessageEvent):
-        evt.stop()
-        self.notify(f"Topic: {evt.topic}, Payload: {evt.payload}")
+        if evt.subscription.id == "mqtt_status" or evt.subscription.id == "mqtt_status_res":
+            self.on_mqtt_status(evt)
+        if evt.subscription.id == "mqtt_calling_grade" or evt.subscription.id == "mqtt_calling_grade_res":
+            self.on_mqtt_calling_grade(evt)
+        if evt.subscription.id == "mqtt_sale_end" or evt.subscription.id == "mqtt_sale_res":
+            self.on_mqtt_sale(evt)
+        if evt.subscription.id == "mqtt_totals" or evt.subscription.id == "mqtt_totals_res":
+            self.on_mqtt_totals(evt)
+        if evt.subscription.id == "mqtt_ppu" or evt.subscription.id == "mqtt_ppu_res":
+            self.on_mqtt_price(evt)
+        if evt.subscription.id == "mqtt_sale_start":
+            self.on_mqtt_sale_start(evt)
+        if evt.subscription.id == "mqtt_rtm":
+            self.on_mqtt_rtm(evt)
+        if evt.subscription.id == "mqtt_grades_res":
+            self.on_mqtt_grades(evt)
+        if evt.subscription.id == "mqtt_type_res":
+            self.on_mqtt_type(evt)
+        if evt.subscription.id == "mqtt_flow":
+            self.on_mqtt_flow(evt)
+        if evt.subscription.id == "mqtt_valve":
+            self.on_mqtt_valve(evt)
 
     def set_auto_sale_config(self, auto_sale_config: dict):
         self.auto_sale_config = auto_sale_config

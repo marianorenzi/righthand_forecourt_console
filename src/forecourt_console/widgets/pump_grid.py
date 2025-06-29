@@ -3,7 +3,7 @@ from textual.app import ComposeResult
 from textual.containers import Container
 from textual.widgets import ListView, ListItem
 from widgets.pump import Pump
-from widgets.textual_mqtt import MqttMessageSubscription, MqttConnectionSubscription, MqttEvent
+from textual_mqtt import MqttMessageSubscription, MqttConnectionSubscription
 import json
 
 class PumpGrid(Container):
@@ -40,9 +40,10 @@ class PumpGrid(Container):
 
     @on(MqttMessageSubscription.MqttMessageEvent)
     def on_mqtt_message(self, evt: MqttMessageSubscription.MqttMessageEvent):
-        evt.stop()
-        self.notify(f"ID: {evt.control.id}, Topic: {evt.topic}, Payload: {evt.payload.replace("[", "").replace("]", "")}", title="PumpGrid MQTT Message")
-        self.log.debug("PumpGrid MQTT Message", evt_id=evt.control.id, topic=evt.topic, payload=evt.payload)
+        if evt.subscription.id == "ids":
+            self.on_mqtt_ids(evt)
+        elif evt.subscription.id == "connection_established":
+            self.on_mqtt_connection_established(evt)
 
     def mount_pumps(self):
         # remove current pump widgets

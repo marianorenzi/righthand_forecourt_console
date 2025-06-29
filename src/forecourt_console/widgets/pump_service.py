@@ -57,38 +57,38 @@ class PumpServicePane(TabPane):
         self.app.screen.maximize(self.query_one(PumpDetails).query_one(MaximizablePlotextPlot), False)
 
     def action_prev_pump(self):
-        self.query_one(PumpGrid).action_cursor_up()
-        pump = self.query_one(PumpGrid).highlighted_child
+        self.query_one(PumpGrid).query_one(ListView).action_cursor_up()
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): self.query_one(PumpDetails).set_pump(pump)
         
 
     def action_next_pump(self):
-        self.query_one(PumpGrid).action_cursor_down()
-        pump = self.query_one(PumpGrid).highlighted_child
+        self.query_one(PumpGrid).query_one(ListView).action_cursor_down()
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): self.query_one(PumpDetails).set_pump(pump)
 
     def action_auth_pump(self):
-        pump = self.query_one(PumpGrid).highlighted_child
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): pump.authorize([])
 
     def action_stop_pump(self):
-        pump = self.query_one(PumpGrid).highlighted_child
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): pump.stop()
 
     def action_resume_pump(self):
-        pump = self.query_one(PumpGrid).highlighted_child
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): pump.resume()
 
     def action_handle_pump(self, handle: int):
-        pump = self.query_one(PumpGrid).highlighted_child
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): pump.set_handle(handle)
 
     def action_preset_pump(self):
-        pump = self.query_one(PumpGrid).highlighted_child
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): self.app.push_screen(PresetModal(pump))
 
     def action_change_price(self):
-        pump = self.query_one(PumpGrid).highlighted_child
+        pump = self.query_one(PumpGrid).query_one(ListView).highlighted_child
         if pump and isinstance(pump, Pump): self.app.push_screen(PriceChangeModal(pump))
 
     @on(Pump.StatusEvent)

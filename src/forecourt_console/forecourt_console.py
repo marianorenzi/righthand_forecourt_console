@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-import paho.mqtt.client as mqtt
-from typing import Iterable
-from datetime import datetime, timedelta
-from textual import on, work
-from textual.app import App, ComposeResult, SystemCommand
+from textual import on
+from textual.app import App, ComposeResult
 from textual.containers import Horizontal
-from textual.screen import Screen
 from textual.widgets import Header, Footer, Label, TabbedContent
 from widgets.pump_service import PumpServicePane
 from widgets.sales_monitor import SalesMonitorPane
-from widgets.textual_mqtt import MqttClient, MqttConnectionSubscription, MqttMessageSubscription
-import threading
+from textual_mqtt import MqttClient, MqttConnectionSubscription, MqttMessageSubscription
 
 class RightHandForecourtConsole(App):
     

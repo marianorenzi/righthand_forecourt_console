@@ -1,3 +1,4 @@
+from textual import on
 from textual.app import ComposeResult
 from textual.events import Key
 from textual.screen import ModalScreen
@@ -99,7 +100,8 @@ class AutoSaleModal(ModalScreen[dict]):
     def on_mount(self) -> None:
         self.query_one("#content", VerticalGroup).styles.column_span = 2
 
-    def on_checkbox_changed(self, event: Checkbox.Changed):
+    @on(Checkbox.Changed, ".grade_checkbox")
+    def on_grade_checkbox_changed(self, event: Checkbox.Changed):
         if event.checkbox.value == False: return
         if event.checkbox.id == "all":
             for checkbox in self.query(".grade_checkbox").results(Checkbox):

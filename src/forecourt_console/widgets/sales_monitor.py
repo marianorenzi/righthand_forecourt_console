@@ -2,7 +2,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.widgets import Label, TabPane, DataTable
 from textual.containers import Container
-from widgets.textual_mqtt import MqttMessageSubscription
+from textual_mqtt import MqttMessageSubscription
 import json
 
 class SalesMonitorPane(TabPane):

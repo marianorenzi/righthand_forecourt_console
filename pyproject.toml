@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -25,16 +25,22 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "paho-mqtt",
   "textual",
   "textual-plotext",
   "textual-slider",
+  "textual-mqtt",
 ]
 
 [project.urls]
 Documentation = "https://github.com/marianorenzi/righthand_forecourt_console#readme"
 Issues = "https://github.com/marianorenzi/righthand_forecourt_console/issues"
 Source = "https://github.com/marianorenzi/righthand_forecourt_console"
+
+[project.scripts]
+shoal = "forecourt_console.forecourt_console:__main__"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.version]
 path = "src/forecourt_console/__about__.py"
