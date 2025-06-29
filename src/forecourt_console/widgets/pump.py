@@ -283,7 +283,6 @@ class Pump(ListItem):
 
         # remove undesired data for rtm
         if len(self.rtm_history) == 0 or self.rtm_history[-1]["time"] != rtm["time"]:
-            del rtm["grade"]
             del rtm["money"]
             self.rtm_history.append(rtm)
             self.mutate_reactive(Pump.rtm_history) # type: ignore
